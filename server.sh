@@ -112,7 +112,7 @@ trap cleanup SIGINT SIGTERM
 # Start tcpdump in background
 PCAP_FILE="${CAPTURE_PREFIX}_$(date +%Y%m%d_%H%M%S).pcap"
 echo "Starting packet capture: $PCAP_FILE"
-$SUDO tcpdump -i "$INTERFACE" -w "$PCAP_FILE" port "$PORT" &
+tcpdump -i "$INTERFACE" -w "$PCAP_FILE" -U port "$PORT" &
 TCPDUMP_PID=$!
 sleep 2
 

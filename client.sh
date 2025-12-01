@@ -160,7 +160,7 @@ trap cleanup SIGINT SIGTERM
 PROTOCOL_NAME=$(echo $PROTOCOL | tr '[:lower:]' '[:upper:]')
 PCAP_FILE="${CAPTURE_PREFIX}_${PROTOCOL_NAME}_$(date +%Y%m%d_%H%M%S).pcap"
 echo -e "${GREEN}Starting packet capture: $PCAP_FILE${NC}"
-tcpdump -i "$INTERFACE" -w "$PCAP_FILE" -U host "$TARGET_IP" and port "$PORT" &
+$SUDO tcpdump -i "$INTERFACE" -w "$PCAP_FILE" -U host "$TARGET_IP" and port "$PORT" &
 TCPDUMP_PID=$!
 sleep 3
 
