@@ -14,6 +14,12 @@ sudo iptables -t nat -A PREROUTING -p tcp --dport 5201 -j DNAT --to-destination 
 # allow the newly translated packet to be forwarded by the proxy
 sudo iptables -A FORWARD -p tcp -d 192.168.1.78 --dport 5201 -j ACCEPT
 
+# Add DNAT rule for UDP traffic
+sudo iptables -t nat -A PREROUTING -p udp --dport 5201 -j DNAT --to-destination 192.168.1.78:5201
+
+# Allow the forwarded UDP packets
+sudo iptables -A FORWARD -p udp -d 192.168.1.78 --dport 5201 -j ACCEPT
+
 # Verify interface name
 ip a
 # Look for your interface (likely eth0, ens33, enp0s3, etc.)
