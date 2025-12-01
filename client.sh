@@ -147,9 +147,18 @@ cleanup() {
     # Kill the specific tcpdump process we started
     if [ ! -z "$TCPDUMP_PID" ]; then
         echo "Stopping tcpdump (PID: $TCPDUMP_PID)..."
-        kill -SIGTERM $TCPDUMP_PID 2>/dev/null || true
+        sudo kill -SIGTERM $TCPDUMP_PID 2>&1 || echo "Failed to kill PID $TCPDUMP_PID"
         sleep 3
+
+        # Force kill if still alive
+        if ps -p $TCPDUMP_PID > /dev/null 2>&1; then
+            echo "Force killing tcpdump..."
+            sudo kill -9 $TCPDUMP_PID 2>&1 || echo "Force kill failed"
+        fi
     fi
+
+    # kill by name and file
+    sudo pkill -9 -f "$PCAP_FILE" 2>/dev/null || true
     echo -e "${GREEN}Client stopped.${NC}"
     exit 0
 }
@@ -213,17 +222,29 @@ fi
 # Stop tcpdump gracefully
 echo -e "${YELLOW}Stopping packet capture...${NC}"
 if [ ! -z "$TCPDUMP_PID" ] && ps -p $TCPDUMP_PID > /dev/null 2>&1; then
-    kill -SIGTERM $TCPDUMP_PID 2>/dev/null || true
+    echo "Killing tcpdump PID: $TCPDUMP_PID"
+    sudo kill -SIGTERM $TCPDUMP_PID 2>&1 || echo "Kill failed for PID $TCPDUMP_PID"
     sleep 3
 
     # Force kill if still alive
     if ps -p $TCPDUMP_PID > /dev/null 2>&1; then
         echo -e "${YELLOW}Force stopping tcpdump...${NC}"
-        kill -9 $TCPDUMP_PID 2>/dev/null || true
+        sudo kill -9 $TCPDUMP_PID 2>&1 || echo "Force kill failed"
+        sleep 1
+    fi
+
+    # Final check
+    if ps -p $TCPDUMP_PID > /dev/null 2>&1; then
+        echo -e "${RED}ERROR: tcpdump PID $TCPDUMP_PID is still running!${NC}"
+    else
+        echo -e "${GREEN}tcpdump successfully stopped${NC}"
     fi
 else
-    echo -e "${YELLOW}Warning: tcpdump process already stopped${NC}"
+    echo -e "${YELLOW}Warning: tcpdump process already stopped or PID unknown${NC}"
 fi
+
+# Backup cleanup by filename
+sudo pkill -9 -f "$PCAP_FILE" 2>/dev/null || true
 
 echo ""
 echo -e "${GREEN}Done!${NC}"

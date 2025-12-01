@@ -91,18 +91,19 @@ cleanup() {
     echo "Shutting down..."
     pkill -f "iperf3 -s.*$PORT" 2>/dev/null || true
 
-    # Kill the specific tcpdump process
     if [ ! -z "$TCPDUMP_PID" ]; then
         echo "Stopping tcpdump (PID: $TCPDUMP_PID)..."
-        kill -SIGTERM $TCPDUMP_PID 2>/dev/null || true
+        sudo kill -SIGTERM $TCPDUMP_PID 2>&1 || echo "Kill failed"
         sleep 3
 
-        # Force kill if still alive
         if ps -p $TCPDUMP_PID > /dev/null 2>&1; then
             echo "Force stopping tcpdump..."
-            kill -9 $TCPDUMP_PID 2>/dev/null || true
+            sudo kill -9 $TCPDUMP_PID 2>&1 || echo "Force kill failed"
         fi
     fi
+
+    # Backup cleanup
+    sudo pkill -9 -f "tcpdump.*$PORT" 2>/dev/null || true
     echo "Server stopped."
     exit 0
 }
