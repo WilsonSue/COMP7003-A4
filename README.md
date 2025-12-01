@@ -27,6 +27,9 @@ ip a
 
 ### Server:
 ```shell
+# Disable firewall
+sudo ufw disable
+
 # Add route to client through proxy
 sudo ip route add 192.168.1.88 via 192.168.1.92
 
@@ -132,6 +135,7 @@ sudo ./client.sh -t 20 -u -b 20M -c exp3_bottleneck_udp -P 192.168.1.92 192.168.
 
 ### Stop Server
 Press Ctrl+C
+sudo ufw enable
 
 ### Clean Proxy
 ```shell
@@ -143,4 +147,5 @@ sudo iptables -D FORWARD -p tcp -d 192.168.1.78 --dport 5201 -j ACCEPT
 
 # Verify cleanup
 sudo tc qdisc show
+
 ```
