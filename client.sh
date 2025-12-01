@@ -162,7 +162,7 @@ PCAP_FILE="${CAPTURE_PREFIX}_${PROTOCOL_NAME}_$(date +%Y%m%d_%H%M%S).pcap"
 echo -e "${GREEN}Starting packet capture: $PCAP_FILE${NC}"
 $SUDO tcpdump -i "$INTERFACE" -w "$PCAP_FILE" -U host "$TARGET_IP" and port "$PORT" &
 TCPDUMP_PID=$!
-sleep 7
+sleep 10
 
 # Verify tcpdump is running
 if ! ps -p $TCPDUMP_PID > /dev/null; then
