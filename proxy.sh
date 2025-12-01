@@ -17,14 +17,6 @@ RATE_LIMIT="10mbit"
 INTERFACE=""
 DRY_RUN=false
 
-# Color output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
-
 # Help function
 show_help() {
     echo "Usage: $0 [OPTIONS]"
@@ -71,29 +63,29 @@ done
 
 # Validate mode
 if [[ ! "$MODE" =~ ^(clean|loss|bottleneck)$ ]]; then
-    echo -e "${RED}Error: Invalid mode '$MODE'${NC}"
+    echo "Error: Invalid mode '$MODE'"
     echo "Valid modes: clean, loss, bottleneck"
     exit 1
 fi
 
 # Check if running as root
 if [ "$EUID" -ne 0 ] && [ "$DRY_RUN" = false ]; then
-    echo -e "${RED}Error: This script must be run as root${NC}"
+    echo "Error: This script must be run as root"
     echo "Run with: sudo $0 $@"
     exit 1
 fi
 
 # Auto-detect interface if not specified
 if [ -z "$INTERFACE" ]; then
-    echo -e "${YELLOW}Auto-detecting network interface...${NC}"
+    echo "Auto-detecting network interface..."
     INTERFACE=$(ip route | grep default | awk '{print $5}' | head -n 1)
     if [ -z "$INTERFACE" ]; then
-        echo -e "${RED}Error: Could not auto-detect interface. Use -i to specify.${NC}"
+        echo "Error: Could not auto-detect interface. Use -i to specify."
         exit 1
     fi
 fi
 
-echo -e "${GREEN}=== Proxy Configuration ===${NC}"
+echo "=== Proxy Configuration ==="
 echo "Mode: $MODE"
 echo "Interface: $INTERFACE"
 if [ "$MODE" = "loss" ]; then
@@ -102,7 +94,7 @@ elif [ "$MODE" = "bottleneck" ]; then
     echo "Rate limit: $RATE_LIMIT"
 fi
 if [ "$DRY_RUN" = true ]; then
-    echo -e "${CYAN}DRY RUN MODE - No changes will be made${NC}"
+    echo "DRY RUN MODE - No changes will be made"
 fi
 echo ""
 
@@ -110,45 +102,45 @@ echo ""
 run_cmd() {
     local cmd="$1"
     if [ "$DRY_RUN" = true ]; then
-        echo -e "${CYAN}[DRY RUN] $cmd${NC}"
+        echo "[DRY RUN] $cmd"
     else
-        echo -e "${YELLOW}Executing: $cmd${NC}"
+        echo "Executing: $cmd"
         eval "$cmd" || true
     fi
 }
 
 # Configure system settings for proxy operation
 configure_proxy() {
-    echo -e "${BLUE}=== Configuring Proxy System Settings ===${NC}"
+    echo "=== Configuring Proxy System Settings ==="
 
     # Enable IP forwarding
     run_cmd "sysctl -w net.ipv4.ip_forward=1"
 
     # Set longer TCP retry timeout (proxy should wait longer than clients)
-    echo -e "${YELLOW}Setting proxy TCP timeout longer than client/server...${NC}"
+    echo "Setting proxy TCP timeout longer than client/server..."
     run_cmd "sysctl -w net.ipv4.tcp_retries2=15"
 
-    echo -e "${GREEN}✓ Proxy system settings configured${NC}"
+    echo "Proxy system settings configured"
     echo ""
 }
 
 # Clean all tc rules
 clean_rules() {
-    echo -e "${BLUE}=== Cleaning tc Rules ===${NC}"
+    echo "=== Cleaning tc Rules ==="
     run_cmd "tc qdisc del dev $INTERFACE root 2>/dev/null"
 
     echo ""
-    echo -e "${GREEN}Current state:${NC}"
+    echo "Current state:"
     if [ "$DRY_RUN" = false ]; then
         tc qdisc show dev "$INTERFACE"
     else
-        echo -e "${CYAN}[Would show: tc qdisc show dev $INTERFACE]${NC}"
+        echo "[Would show: tc qdisc show dev $INTERFACE]"
     fi
 }
 
 # Apply loss impairment
 apply_loss() {
-    echo -e "${BLUE}=== Applying ${LOSS_PERCENT}% Packet Loss ===${NC}"
+    echo "=== Applying ${LOSS_PERCENT}% Packet Loss ==="
 
     # Clean first
     run_cmd "tc qdisc del dev $INTERFACE root 2>/dev/null"
@@ -157,16 +149,16 @@ apply_loss() {
     run_cmd "tc qdisc add dev $INTERFACE root netem loss ${LOSS_PERCENT}%"
 
     echo ""
-    echo -e "${GREEN}Current state:${NC}"
+    echo "Current state:"
     if [ "$DRY_RUN" = false ]; then
         tc qdisc show dev "$INTERFACE"
         tc -s qdisc show dev "$INTERFACE"
     else
-        echo -e "${CYAN}[Would show: tc qdisc/stats]${NC}"
+        echo "[Would show: tc qdisc/stats]"
     fi
 
     echo ""
-    echo -e "${YELLOW}Expected behavior:${NC}"
+    echo "Expected behavior:"
     echo "  - ${LOSS_PERCENT}% of packets will be randomly dropped"
     echo "  - TCP will show retransmissions and cwnd reductions"
     echo "  - UDP will maintain send rate but show loss at receiver"
@@ -174,27 +166,25 @@ apply_loss() {
 
 # Apply bottleneck impairment
 apply_bottleneck() {
-    echo -e "${BLUE}=== Applying Bandwidth Limit: $RATE_LIMIT ===${NC}"
+    echo "=== Applying Bandwidth Limit: $RATE_LIMIT ==="
 
     # Clean first
     run_cmd "tc qdisc del dev $INTERFACE root 2>/dev/null"
 
     # Add TBF (Token Bucket Filter)
-    # burst = rate / Hz, with min 1600 bytes
-    # For 10mbit, burst = 10000000 / 250 / 8 = 5000 bytes, use 32kbit (4096 bytes)
     run_cmd "tc qdisc add dev $INTERFACE root tbf rate $RATE_LIMIT burst 32kbit latency 400ms"
 
     echo ""
-    echo -e "${GREEN}Current state:${NC}"
+    echo "Current state:"
     if [ "$DRY_RUN" = false ]; then
         tc qdisc show dev "$INTERFACE"
         tc -s qdisc show dev "$INTERFACE"
     else
-        echo -e "${CYAN}[Would show: tc qdisc/stats]${NC}"
+        echo "[Would show: tc qdisc/stats]"
     fi
 
     echo ""
-    echo -e "${YELLOW}Expected behavior:${NC}"
+    echo "Expected behavior:"
     echo "  - Traffic limited to $RATE_LIMIT"
     echo "  - TCP will converge near this rate"
     echo "  - UDP above this rate will experience significant loss"
@@ -206,21 +196,21 @@ main() {
         clean)
             clean_rules
             echo ""
-            echo -e "${GREEN}All impairments removed. Path is clean.${NC}"
+            echo "All impairments removed. Path is clean."
             ;;
         loss)
             configure_proxy
             apply_loss
             echo ""
-            echo -e "${GREEN}Loss impairment applied.${NC}"
-            echo -e "${YELLOW}Remember to run '$0 -m clean' after testing!${NC}"
+            echo "Loss impairment applied."
+            echo "Remember to run '$0 -m clean' after testing!"
             ;;
         bottleneck)
             configure_proxy
             apply_bottleneck
             echo ""
-            echo -e "${GREEN}Bottleneck applied.${NC}"
-            echo -e "${YELLOW}Remember to run '$0 -m clean' after testing!${NC}"
+            echo "Bottleneck applied."
+            echo "Remember to run '$0 -m clean' after testing!"
             ;;
     esac
 }
@@ -229,25 +219,25 @@ main() {
 verify_setup() {
     if [ "$DRY_RUN" = false ] && [ "$MODE" != "clean" ]; then
         echo ""
-        echo -e "${BLUE}=== Verifying Setup ===${NC}"
+        echo "=== Verifying Setup ==="
 
         # Check IP forwarding
         if [ "$(cat /proc/sys/net/ipv4/ip_forward)" = "1" ]; then
-            echo -e "${GREEN}✓ IP forwarding enabled${NC}"
+            echo "IP forwarding enabled"
         else
-            echo -e "${RED}✗ IP forwarding disabled${NC}"
+            echo "IP forwarding disabled"
         fi
 
         # Check tc rules
         if tc qdisc show dev "$INTERFACE" | grep -q "netem\|tbf"; then
-            echo -e "${GREEN}✓ Traffic control rules active${NC}"
+            echo "Traffic control rules active"
         else
-            echo -e "${YELLOW}! No traffic control rules found${NC}"
+            echo "! No traffic control rules found"
         fi
 
         # Show statistics
         echo ""
-        echo -e "${BLUE}Statistics:${NC}"
+        echo "Statistics:"
         tc -s qdisc show dev "$INTERFACE"
     fi
 }
@@ -259,10 +249,10 @@ main
 verify_setup
 
 echo ""
-echo -e "${GREEN}Done!${NC}"
+echo "Done!"
 
 if [ "$MODE" != "clean" ]; then
     echo ""
-    echo -e "${RED}REMINDER: Run the following when done testing:${NC}"
-    echo -e "${YELLOW}  sudo $0 -m clean${NC}"
+    echo "REMINDER: Run the following when done testing:"
+    echo "  sudo $0 -m clean"
 fi

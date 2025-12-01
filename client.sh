@@ -27,7 +27,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Help function
+# Helper function
 show_help() {
     echo "Usage: $0 [OPTIONS] SERVER_IP"
     echo ""
