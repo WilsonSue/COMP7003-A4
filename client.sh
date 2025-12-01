@@ -148,7 +148,7 @@ cleanup() {
     if [ ! -z "$TCPDUMP_PID" ] && ps -p $TCPDUMP_PID > /dev/null 2>&1; then
         echo "Stopping tcpdump (PID: $TCPDUMP_PID)..."
         $SUDO kill -SIGTERM $TCPDUMP_PID 2>/dev/null || true
-        sleep 2
+        wait $TCPDUMP_PID 2>/dev/null || true
     fi
     echo -e "${GREEN}Client stopped.${NC}"
     exit 0
