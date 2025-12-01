@@ -145,10 +145,10 @@ echo ""
 cleanup() {
     echo -e "\n${YELLOW}Cleaning up...${NC}"
     # Kill the specific tcpdump process we started
-    if [ ! -z "$TCPDUMP_PID" ] && ps -p $TCPDUMP_PID > /dev/null 2>&1; then
+    if [ ! -z "$TCPDUMP_PID" ]; then
         echo "Stopping tcpdump (PID: $TCPDUMP_PID)..."
-        $SUDO kill -SIGTERM $TCPDUMP_PID 2>/dev/null || true
-        wait $TCPDUMP_PID 2>/dev/null || true
+        kill -SIGTERM $TCPDUMP_PID 2>/dev/null || true
+        sleep 3
     fi
     echo -e "${GREEN}Client stopped.${NC}"
     exit 0
@@ -160,9 +160,9 @@ trap cleanup SIGINT SIGTERM
 PROTOCOL_NAME=$(echo $PROTOCOL | tr '[:lower:]' '[:upper:]')
 PCAP_FILE="${CAPTURE_PREFIX}_${PROTOCOL_NAME}_$(date +%Y%m%d_%H%M%S).pcap"
 echo -e "${GREEN}Starting packet capture: $PCAP_FILE${NC}"
-$SUDO tcpdump -i "$INTERFACE" -w "$PCAP_FILE" -U host "$TARGET_IP" and port "$PORT" &
+tcpdump -i "$INTERFACE" -w "$PCAP_FILE" -U host "$TARGET_IP" and port "$PORT" &
 TCPDUMP_PID=$!
-sleep 10
+sleep 3
 
 # Verify tcpdump is running
 if ! ps -p $TCPDUMP_PID > /dev/null; then
@@ -171,7 +171,6 @@ if ! ps -p $TCPDUMP_PID > /dev/null; then
 fi
 
 echo -e "${GREEN}Packet capture started (PID: $TCPDUMP_PID)${NC}"
-echo ""
 
 # Build iperf3 command
 IPERF_CMD="iperf3 -c $TARGET_IP -p $PORT -t $DURATION"
@@ -213,9 +212,18 @@ fi
 
 # Stop tcpdump gracefully
 echo -e "${YELLOW}Stopping packet capture...${NC}"
-if ps -p $TCPDUMP_PID > /dev/null 2>&1; then
-    $SUDO kill -SIGTERM $TCPDUMP_PID 2>/dev/null || true
-    sleep 2
+if [ ! -z "$TCPDUMP_PID" ] && ps -p $TCPDUMP_PID > /dev/null 2>&1; then
+    kill -SIGTERM $TCPDUMP_PID 2>/dev/null || true
+    sleep 3
+
+    # Force kill if still alive
+    if ps -p $TCPDUMP_PID > /dev/null 2>&1; then
+        echo -e "${YELLOW}Force stopping tcpdump...${NC}"
+        kill -9 $TCPDUMP_PID 2>/dev/null || true
+    fi
 else
     echo -e "${YELLOW}Warning: tcpdump process already stopped${NC}"
 fi
+
+echo ""
+echo -e "${GREEN}Done!${NC}"
