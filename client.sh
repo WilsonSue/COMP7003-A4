@@ -144,7 +144,12 @@ echo ""
 # Cleanup function
 cleanup() {
     echo -e "\n${YELLOW}Cleaning up...${NC}"
-    $SUDO pkill -f "tcpdump.*$SERVER_IP" 2>/dev/null || true
+    # Kill the specific tcpdump process we started
+    if [ ! -z "$TCPDUMP_PID" ] && ps -p $TCPDUMP_PID > /dev/null 2>&1; then
+        echo "Stopping tcpdump (PID: $TCPDUMP_PID)..."
+        $SUDO kill -SIGTERM $TCPDUMP_PID 2>/dev/null || true
+        sleep 2
+    fi
     echo -e "${GREEN}Client stopped.${NC}"
     exit 0
 }
@@ -206,9 +211,11 @@ else
     echo "  tshark -r $PCAP_FILE | wc -l  # Count packets"
 fi
 
-# Stop tcpdump
-$SUDO kill $TCPDUMP_PID 2>/dev/null || true
-sleep 1
-
-echo ""
-echo -e "${GREEN}Done!${NC}"
+# Stop tcpdump gracefully
+echo -e "${YELLOW}Stopping packet capture...${NC}"
+if ps -p $TCPDUMP_PID > /dev/null 2>&1; then
+    $SUDO kill -SIGTERM $TCPDUMP_PID 2>/dev/null || true
+    sleep 2
+else
+    echo -e "${YELLOW}Warning: tcpdump process already stopped${NC}"
+fi

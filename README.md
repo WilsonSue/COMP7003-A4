@@ -31,6 +31,12 @@ sudo ip route add 192.168.1.78 via 192.168.1.92
 ip route | grep 192.168.1.78
 ```
 
+## After tests server & client run:
+
+```shell
+sudo pkill tcpdump
+ps aux | grep tcpdump 
+```
 
 ## Test 1 & 2
 

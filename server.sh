@@ -90,7 +90,12 @@ cleanup() {
     echo ""
     echo "Shutting down..."
     pkill -f "iperf3 -s.*$PORT" 2>/dev/null || true
-    $SUDO pkill -f "tcpdump.*$PORT" 2>/dev/null || true
+    # Kill the specific tcpdump process
+    if [ ! -z "$TCPDUMP_PID" ] && ps -p $TCPDUMP_PID > /dev/null 2>&1; then
+        echo "Stopping tcpdump (PID: $TCPDUMP_PID)..."
+        $SUDO kill -SIGTERM $TCPDUMP_PID 2>/dev/null || true
+        sleep 2
+    fi
     echo "Server stopped."
     exit 0
 }
